@@ -63,5 +63,22 @@ let
     }),
     mapAll = Table.Combine({map_v2, map_v3, map_v4}), // combine mapping tables into one table
 
+    // joins key-value pairs of input vector string with the mapping tables
+    joined   = Table.NestedJoin(kvTable, {"Metric","Code"}, mapAll, {"Metric","Code"}, "m", JoinKind.LeftOuter),
+    expanded = Table.ExpandTableColumn(joined, "m", {"Name","Readable"}, {"Name","Readable"}),
+    known    = Table.SelectRows(expanded, each [Name] <> null),
+    known2   = Table.SelectColumns(known, {"Name","Readable"}),
+    
+    // squashes table down into a single dimension
+    pivoted  =
+        if Table.IsEmpty(known2) then #table({"Placeholder"}, {{null}})
+        else
+            let
+                withKey  = Table.AddColumn(known2, "__key__", each 1),
+                cols     = List.Distinct(withKey[Name]),
+                pvt      = Table.Pivot(withKey, cols, "Name", "Readable", each List.First(_)),
+                cleaned  = Table.RemoveColumns(pvt, {"__key__"})
+            in
+                cleaned,
 in
-    mapAll
+    pivoted
