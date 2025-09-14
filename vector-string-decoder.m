@@ -89,7 +89,7 @@ let
     // adds metadata and summary columns
     addMeta  = Table.AddColumn(pivoted, "detectedVersion", each detected, type text),
     addOriginal  = Table.AddColumn(addMeta, "originalVector", each rawVectorString, type text),
-    addOther = Table.AddColumn(addOriginal, "Other Metrics", each otherRaw, type text),
+    addOther = Table.AddColumn(addOriginal, "otherMetrics", each otherRaw, type text),
     withSummary = Table.AddColumn(addOther, "summary", each
         let r = _ in Text.Combine(List.RemoveNulls({
             if Record.HasFields(r, "Attack Vector") then "Attack Vector: " & r[Attack Vector]
@@ -110,7 +110,8 @@ let
             if Record.HasFields(r, "Subsequent Confidentiality") then "Subsequent Confidentiality: " & r[Subsequent Confidentiality] else null,
             if Record.HasFields(r, "Subsequent Integrity") then "Subsequent Integrity: " & r[Subsequent Integrity] else null,
             if Record.HasFields(r, "Subsequent Availability") then "Subsequent Availability: " & r[Subsequent Availability] else null
-        }), " • "), type text),
+        }), "
+"), type text),
 
     // selects columns to keep
     keep = {
@@ -134,8 +135,8 @@ let
         "Subsequent Confidentiality",
         "Subsequent Integrity",
         "Subsequent Availability",
-        "Other Metrics",
-        "Readable Summary"
+        "otherMetrics",
+        "summary"
     },
 
     // prepare final table
