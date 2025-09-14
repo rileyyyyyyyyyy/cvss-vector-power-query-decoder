@@ -1,2 +1,9 @@
-# cvss-vector-power-query-decoder
-M Power Query to convert CVSS vector strings like `CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H` into readable fields.
+# CVSS Vector String Decoder
+
+Power Query function to process a CVSS vector string into a more readable form for Power BI reports.
+
+
+----
+
+*Created by Riley Purcell<br>
+Last updated 15 September 2025*
