@@ -90,7 +90,7 @@ let
     addMeta  = Table.AddColumn(pivoted, "detectedVersion", each detected, type text),
     addOriginal  = Table.AddColumn(addMeta, "originalVector", each rawVectorString, type text),
     addOther = Table.AddColumn(addOriginal, "otherMetrics", each otherRaw, type text),
-    withSummary = Table.AddColumn(addOther, "summary", each
+    withSummary = Table.AddColumn(addOther, "cvssVectorSummary", each
         let r = _ in Text.Combine(List.RemoveNulls({
             if Record.HasFields(r, "Attack Vector") then "Attack Vector: " & r[Attack Vector]
             else if Record.HasFields(r, "Access Vector") then "Access Vector: " & r[Access Vector] else null,
@@ -136,7 +136,7 @@ let
         "Subsequent Integrity",
         "Subsequent Availability",
         "otherMetrics",
-        "summary"
+        "cvssVectorSummary"
     },
 
     // prepare final table
