@@ -68,7 +68,7 @@ let
     expanded = Table.ExpandTableColumn(joined, "m", {"Name","Readable"}, {"Name","Readable"}),
     known    = Table.SelectRows(expanded, each [Name] <> null),
     known2   = Table.SelectColumns(known, {"Name","Readable"}),
-    
+
     // squashes table down into a single dimension
     pivoted  =
         if Table.IsEmpty(known2) then #table({"Placeholder"}, {{null}})
@@ -80,5 +80,65 @@ let
                 cleaned  = Table.RemoveColumns(pvt, {"__key__"})
             in
                 cleaned,
+
+    // handles unknown metrics
+    unknown  = Table.SelectRows(expanded, each [Name]=null),
+    otherRaw = if Table.IsEmpty(unknown) then null
+               else Text.Combine(List.Transform(Table.ToRecords(unknown), each _[Metric] & ":" & _[Code]), " / "),
+
+    // adds metadata and summary columns
+    addMeta  = Table.AddColumn(pivoted, "detectedVersion", each detected, type text),
+    addOriginal  = Table.AddColumn(addMeta, "originalVector", each rawVectorString, type text),
+    addOther = Table.AddColumn(addOriginal, "Other Metrics", each otherRaw, type text),
+    withSummary = Table.AddColumn(addOther, "summary", each
+        let r = _ in Text.Combine(List.RemoveNulls({
+            if Record.HasFields(r, "Attack Vector") then "Attack Vector: " & r[Attack Vector]
+            else if Record.HasFields(r, "Access Vector") then "Access Vector: " & r[Access Vector] else null,
+            if Record.HasFields(r, "Attack Complexity") then "Attack Complexity: " & r[Attack Complexity]
+            else if Record.HasFields(r, "Access Complexity") then "Access Complexity: " & r[Access Complexity] else null,
+            if Record.HasFields(r, "Attack Requirements") then "Attack Requirements: " & r[Attack Requirements] else null,
+            if Record.HasFields(r, "Privileges Required") then "Privileges Required: " & r[Privileges Required] else null,
+            if Record.HasFields(r, "Authentication") then "Authentication Required: " & r[Authentication] else null,
+            if Record.HasFields(r, "User Interaction") then "User Interaction Required: " & r[User Interaction] else null,
+            if Record.HasFields(r, "Scope") then "Scope: " & r[Scope] else null,
+            if Record.HasFields(r, "Confidentiality") then "Confidentiality: " & r[Confidentiality] else null,
+            if Record.HasFields(r, "Integrity") then "Integrity: " & r[Integrity] else null,
+            if Record.HasFields(r, "Availability") then "Availability: " & r[Availability] else null,
+            if Record.HasFields(r, "Vulnerable Confidentiality") then "Vulnerable Confidentiality: " & r[Vulnerable Confidentiality] else null,
+            if Record.HasFields(r, "Vulnerable Integrity") then "Vulnerable Integrity: " & r[Vulnerable Integrity] else null,
+            if Record.HasFields(r, "Vulnerable Availability") then "Vulnerable Availability: " & r[Vulnerable Availability] else null,
+            if Record.HasFields(r, "Subsequent Confidentiality") then "Subsequent Confidentiality: " & r[Subsequent Confidentiality] else null,
+            if Record.HasFields(r, "Subsequent Integrity") then "Subsequent Integrity: " & r[Subsequent Integrity] else null,
+            if Record.HasFields(r, "Subsequent Availability") then "Subsequent Availability: " & r[Subsequent Availability] else null
+        }), " • "), type text),
+
+    // selects columns to keep
+    keep = {
+        "detectedVersion",
+        "originalVector",
+        "Access Vector",
+        "Attack Vector",
+        "Access Complexity",
+        "Attack Complexity",
+        "Attack Requirements",
+        "Privileges Required",
+        "Authentication",
+        "User Interaction",
+        "Scope",
+        "Confidentiality",
+        "Integrity",
+        "Availability",
+        "Vulnerable Confidentiality",
+        "Vulnerable Integrity",
+        "Vulnerable Availability",
+        "Subsequent Confidentiality",
+        "Subsequent Integrity",
+        "Subsequent Availability",
+        "Other Metrics",
+        "Readable Summary"
+    },
+
+    // prepare final table
+    final = Table.SelectColumns(withSummary, List.Intersect({keep, Table.ColumnNames(withSummary)}), MissingField.UseNull)
 in
-    pivoted
+    final
